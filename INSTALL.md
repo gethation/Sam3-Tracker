@@ -15,13 +15,28 @@ conda activate sam3-tracker
 
 Install the PyTorch build that matches your machine.
 
-For CUDA 12.8:
+First check your NVIDIA driver:
 
 ```powershell
-pip install torch==2.10.0 torchvision --index-url https://download.pytorch.org/whl/cu128
+nvidia-smi
 ```
 
-For a different CUDA version or CPU-only install, use the selector on:
+Use a PyTorch CUDA wheel whose CUDA version is less than or equal to the
+`CUDA Version` shown by `nvidia-smi`.
+
+For example, if `nvidia-smi` shows CUDA 12.7, install a CUDA 12.6 PyTorch wheel:
+
+```powershell
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+```
+
+If your driver supports CUDA 12.8 or newer, a CUDA 12.8 wheel is also valid:
+
+```powershell
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+```
+
+For other CUDA versions or CPU-only install, use the official selector:
 
 https://pytorch.org/get-started/locally/
 
@@ -30,6 +45,10 @@ https://pytorch.org/get-started/locally/
 ```powershell
 pip install -r requirements.txt
 ```
+
+The scripts disable PyTorch compile/TorchInductor by default to avoid Triton
+setup issues on Windows. This is slower than compiled inference but easier to
+install and run.
 
 ## 4. Download `sam3.pt`
 

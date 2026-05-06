@@ -15,7 +15,10 @@ Example:
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
+
+os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
 
 import cv2
 from ultralytics.models.sam import SAM3VideoPredictor
@@ -276,6 +279,7 @@ def main() -> None:
         "model": str(model_path),
         "task": "segment",
         "mode": "predict",
+        "compile": False,
         "conf": args.conf,
         "imgsz": args.imgsz,
         "half": not args.no_half,

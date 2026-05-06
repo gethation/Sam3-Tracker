@@ -3,6 +3,7 @@
 This folder is trimmed for SAM3 prediction through Ultralytics.
 
 See `INSTALL.md` for environment setup.
+PyTorch compile is disabled by default to avoid Triton setup issues.
 
 ## Kept Files
 
