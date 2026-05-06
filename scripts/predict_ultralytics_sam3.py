@@ -8,10 +8,7 @@ Example:
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
-
-os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
 
 from ultralytics.models.sam import SAM3SemanticPredictor, SAM3VideoSemanticPredictor
 
@@ -101,6 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold.")
     parser.add_argument("--imgsz", type=int, default=1024, help="Inference image size.")
     parser.add_argument("--no-half", action="store_true", help="Disable FP16 inference.")
+    parser.add_argument("--compile", action="store_true", help="Enable torch.compile/Triton when loading SAM3.")
     parser.add_argument("--no-save", action="store_true", help="Do not save visualized outputs.")
     return parser
 
@@ -129,7 +127,7 @@ def main() -> None:
         "model": str(model_path),
         "task": "segment",
         "mode": "predict",
-        "compile": False,
+        "compile": args.compile,
         "conf": args.conf,
         "imgsz": args.imgsz,
         "half": not args.no_half,

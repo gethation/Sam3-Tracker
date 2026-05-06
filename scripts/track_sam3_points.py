@@ -15,10 +15,7 @@ Example:
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
-
-os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
 
 import cv2
 from ultralytics.models.sam import SAM3VideoPredictor
@@ -227,13 +224,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--vid-stride", type=int, default=1, help="Video frame stride.")
     parser.add_argument("--max-display-size", type=int, default=1280, help="Max side length for the first-frame UI.")
     parser.add_argument("--no-half", action="store_true", help="Disable FP16 inference.")
+    parser.add_argument("--compile", action="store_true", help="Enable torch.compile/Triton when loading SAM3.")
     parser.add_argument("--no-save", action="store_true", help="Do not save visualized output.")
     parser.add_argument("--no-preview", action="store_true", help="Disable live preview while tracking.")
     parser.add_argument(
         "--yolo-format",
-        choices=("segment", "box"),
-        default="segment",
-        help="YOLOv8 label format to export. Use segment for YOLOv8-seg or box for YOLOv8-detect.",
+        choices=("both", "box", "segment"),
+        default="both",
+        help="YOLOv8 label export format. Default writes box labels to labels/ and segment labels to labels-seg/.",
     )
     parser.add_argument("--class-id", type=int, default=0, help="Class id written to YOLO label files.")
     parser.add_argument("--class-name", default="object", help="Class name written to dataset.yaml.")
@@ -255,9 +253,13 @@ def main() -> None:
         raise FileNotFoundError(f"Source video not found: {source_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     labels_dir = output_path.parent / "labels"
+    seg_labels_dir = output_path.parent / "labels-seg"
     images_dir = output_path.parent / "images"
     if not args.no_save_yolo:
-        labels_dir.mkdir(parents=True, exist_ok=True)
+        if args.yolo_format in {"both", "box"}:
+            labels_dir.mkdir(parents=True, exist_ok=True)
+        if args.yolo_format in {"both", "segment"}:
+            seg_labels_dir.mkdir(parents=True, exist_ok=True)
         if not args.no_save_frames:
             images_dir.mkdir(parents=True, exist_ok=True)
         dataset_yaml = write_dataset_yaml(output_path.parent, args.class_id, args.class_name)
@@ -279,7 +281,7 @@ def main() -> None:
         "model": str(model_path),
         "task": "segment",
         "mode": "predict",
-        "compile": False,
+        "compile": args.compile,
         "conf": args.conf,
         "imgsz": args.imgsz,
         "half": not args.no_half,
@@ -301,7 +303,8 @@ def main() -> None:
     writer = None
     fps = get_video_fps(source_path, args.vid_stride)
     frame_count = 0
-    label_count = 0
+    box_label_count = 0
+    segment_label_count = 0
     try:
         for frame_count, result in enumerate(results, start=1):
             plotted = result.plot()
@@ -317,12 +320,20 @@ def main() -> None:
 
             if not args.no_save_yolo:
                 item_stem = f"{source_path.stem}_{frame_count:06d}"
-                label_count += write_yolo_label(
-                    result,
-                    labels_dir / f"{item_stem}.txt",
-                    args.class_id,
-                    args.yolo_format,
-                )
+                if args.yolo_format in {"both", "box"}:
+                    box_label_count += write_yolo_label(
+                        result,
+                        labels_dir / f"{item_stem}.txt",
+                        args.class_id,
+                        "box",
+                    )
+                if args.yolo_format in {"both", "segment"}:
+                    segment_label_count += write_yolo_label(
+                        result,
+                        seg_labels_dir / f"{item_stem}.txt",
+                        args.class_id,
+                        "segment",
+                    )
                 if not args.no_save_frames:
                     cv2.imwrite(str(images_dir / f"{item_stem}.jpg"), result.orig_img)
 
@@ -345,10 +356,14 @@ def main() -> None:
     if not args.no_save and frame_count > 0:
         print(f"Saved MP4: {output_path}")
     if not args.no_save_yolo and frame_count > 0:
-        print(f"Saved YOLOv8 {args.yolo_format} labels: {labels_dir}")
+        if args.yolo_format in {"both", "box"}:
+            print(f"Saved YOLOv8 detection labels: {labels_dir}")
+            print(f"YOLO detection objects written: {box_label_count}")
+        if args.yolo_format in {"both", "segment"}:
+            print(f"Saved YOLOv8 segmentation labels: {seg_labels_dir}")
+            print(f"YOLO segmentation objects written: {segment_label_count}")
         if not args.no_save_frames:
             print(f"Saved YOLOv8 frame images: {images_dir}")
-        print(f"YOLO objects written: {label_count}")
         print(f"Dataset YAML: {dataset_yaml}")
 
 

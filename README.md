@@ -3,7 +3,8 @@
 This folder is trimmed for SAM3 prediction through Ultralytics.
 
 See `INSTALL.md` for environment setup.
-PyTorch compile is disabled by default to avoid Triton setup issues.
+PyTorch compile is disabled by default to avoid Triton setup issues. Add
+`--compile` if your local PyTorch/Triton setup supports it.
 
 ## Kept Files
 
@@ -47,6 +48,11 @@ points on the first frame.
 
 The tracking helper defaults to `--imgsz 840`, which is lighter for a 6GB GPU
 and divisible by SAM3's stride.
+Use Triton/TorchInductor locally with:
+
+```powershell
+& 'D:\Users\miniconda3\condabin\conda.bat' run -n DeepLearning python scripts\track_sam3_points.py --model sam3.pt --compile
+```
 
 Controls:
 
@@ -71,22 +77,80 @@ Saved tracking output goes under `data/output/<source-name>/`.
 Use `--no-preview` to disable the live preview window.
 Use `--output "data\output\custom_name.mp4"` to choose a different MP4 path.
 
-The tracker also exports YOLOv8 training files by default:
+## Output Files
 
-- `data/output/IMG_2838/IMG_2838_sam3_track.mp4`: preview MP4
-- `data/output/IMG_2838/images/`: extracted frame images
-- `data/output/IMG_2838/labels/`: YOLO label txt files
-- `data/output/IMG_2838/dataset.yaml`: dataset config
+For an input video named `IMG_2838.MOV`, tracking output is written under:
 
-Default label format is YOLOv8 segmentation:
+```text
+data/output/IMG_2838/
+```
+
+The folder contains:
+
+```text
+data/output/IMG_2838/
+  IMG_2838_sam3_track.mp4
+  images/
+    IMG_2838_000001.jpg
+    IMG_2838_000002.jpg
+    ...
+  labels/
+    IMG_2838_000001.txt
+    IMG_2838_000002.txt
+    ...
+  labels-seg/
+    IMG_2838_000001.txt
+    IMG_2838_000002.txt
+    ...
+  dataset.yaml
+```
+
+`IMG_2838_sam3_track.mp4` is the rendered preview video with SAM3 masks drawn on
+top of the original frames.
+
+`images/` contains the frame images used for YOLO training. Each image has a
+matching label file with the same stem. For example:
+
+```text
+images/IMG_2838_000001.jpg
+labels/IMG_2838_000001.txt
+labels-seg/IMG_2838_000001.txt
+```
+
+`labels/` is the primary YOLOv8 detection dataset. Each `.txt` file uses box
+labels:
+
+```text
+class x_center y_center width height
+```
+
+The coordinates are normalized from 0 to 1. `x_center` and `width` are relative
+to image width. `y_center` and `height` are relative to image height.
+
+`labels-seg/` is the auxiliary YOLOv8 segmentation dataset. Each `.txt` file uses
+polygon labels:
 
 ```text
 class x1 y1 x2 y2 x3 y3 ...
 ```
 
-Use detection box labels instead with:
+Each pair is one normalized polygon point. These files contain many more numbers
+because they describe the object outline rather than a rectangular box.
+
+`dataset.yaml` points YOLOv8 to the `images/` and primary `labels/` folders:
+
+```yaml
+path: data/output/IMG_2838
+train: images
+val: images
+names:
+  0: object
+```
+
+The default `--yolo-format both` writes both formats. To write only one format:
 
 ```powershell
+& 'D:\Users\miniconda3\condabin\conda.bat' run -n DeepLearning python scripts\track_sam3_points.py --yolo-format segment
 & 'D:\Users\miniconda3\condabin\conda.bat' run -n DeepLearning python scripts\track_sam3_points.py --yolo-format box
 ```
 

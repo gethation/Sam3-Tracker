@@ -48,7 +48,8 @@ pip install -r requirements.txt
 
 The scripts disable PyTorch compile/TorchInductor by default to avoid Triton
 setup issues on Windows. This is slower than compiled inference but easier to
-install and run.
+install and run. If your local Triton setup works, add `--compile` when running
+the scripts.
 
 ## 4. Download `sam3.pt`
 
