@@ -2,6 +2,8 @@
 
 This folder is trimmed for SAM3 prediction through Ultralytics.
 
+See `INSTALL.md` for environment setup.
+
 ## Kept Files
 
 - `data/source/`: input images and videos
