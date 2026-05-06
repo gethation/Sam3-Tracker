@@ -1,0 +1,10 @@
+sam3.pt
+data/source/
+data/output/
+*.mp4
+*.MOV
+*.mov
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
